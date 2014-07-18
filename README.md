@@ -1,7 +1,7 @@
 express-output-cache
 ====================
 
-This middleware caches the output (headers and body) of an Express request using Redis. Only string-based responses sent using `res.send()` (including `res.render()`) with `statusCode` < 400 are cached.
+This middleware caches the output (headers and body) of an Express request using Redis. Only string-based responses sent using `res.send()` (including `res.render()`) with `statusCode` < 400 are cached. Also emits cache events.
 
 ### Installation
 
@@ -23,6 +23,15 @@ Options can be the TTL for cache entries in seconds or an object with the follow
  * `skipCache`: Either boolean `true` to skip the cache for all requests or a callback which will be passed Express' `req` as its only argument.
  * `cacheClient`: Cache client; can be redis or any object that supports `get()`, `set()` and `expire()` like redis. (default: create a new Redis client)
 
+### Events
+
+The module exports an event emitter which can directly be accessed at the `outputCache` function:
+
+ * `hit(cacheKey, req)`
+ * `miss(cacheKey, req)`
+ * `save(cacheKey, req, cacheObj)`
+ * `cacheError(err)`
+
 ### License
 
- MIT
+MIT
