@@ -84,17 +84,31 @@ function outputCache(options) {
         _setHeader.call(this, name, value);
       };
 
+      var _send = res.send;
+      res.send = function(status, body) {
+        if (!body) {
+          body = status;
+        }
+        else if (status >= 400) {
+          return _send.apply(this, arguments);
+        }
+
+        res.cacheBody = body;
+        _send.apply(this, arguments);
+      };
+
       var _end = res.end;
       res.end = function(chunk, encoding) {
-        _end.call(this, chunk, encoding);
-
+        var self = this;
+        var args = arguments;
         if (res.statusCode >= 400 || !res.cacheBody) {
+          _end.apply(self, args);
           return;
         }
 
         var cacheObj = {
           headers: headers,
-          body: chunk,
+          body: res.cacheBody,
           statusCode: res.statusCode
         };
 
@@ -113,6 +127,8 @@ function outputCache(options) {
             cacheEvents.emit('save', cacheKey, cacheObj);
           });
         });
+
+        _end.apply(self, args);
       };
 
       next();
