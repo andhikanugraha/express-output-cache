@@ -23,7 +23,7 @@ function outputCache(options) {
     cacheKey: (typeof options.cacheKey === 'function') ?
       options.cacheKey :
       function(req) {
-        return options.prefix + req.originalUrl;
+        return options.prefix + ':' + req.originalUrl;
       },
     skipCache: options.skipCache || false,
     cacheClient: options.cacheClient || redisClient
