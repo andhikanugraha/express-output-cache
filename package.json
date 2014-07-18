@@ -1,0 +1,31 @@
+{
+  "name": "express-output-cache",
+  "version": "0.1.0",
+  "description": "Straightforward Express output caching middleware using Redis.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andhikanugraha/express-output-cache.git"
+  },
+  "keywords": [
+    "redis",
+    "express",
+    "cache",
+    "output"
+  ],
+  "author": "Andhika Nugraha (andhika.nugraha@outlook.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/andhikanugraha/express-output-cache/issues"
+  },
+  "homepage": "https://github.com/andhikanugraha/express-output-cache",
+  "dependencies": {
+    "redis": "^0.11.0"
+  },
+  "peerDependencies": {
+    "express": "*"
+  }
+}
