@@ -33,8 +33,6 @@ function outputCache(options) {
       !options.cacheClient.get ||
       !options.cacheClient.set ||
       !options.cacheClient.expire) {
-    cacheEvents.emit('warning',
-      new Error('Invalid cacheClient value. Reverting to redis.'));
     options.cacheClient =
       redisClient = require('redis').createClient(options.redis);
   }
