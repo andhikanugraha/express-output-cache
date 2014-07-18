@@ -1,3 +1,7 @@
+var events = require('events');
+var util = require('util');
+
+var cacheEvents = new events.EventEmitter();
 var redisClient;
 
 /**
@@ -16,27 +20,38 @@ function outputCache(options) {
   options = {
     prefix: options.prefix || 'outputcache',
     ttl: parseInt(options.ttl) || 60,
-    getCacheKey: options.getCacheKey || function(req) {
-      return options.prefix + req.originalUrl;
-    },
-    skipCache: options.skipCache || function(req) {
-      return true;
-    },
-    cacheClient:
-      options.cacheClient ||
-      redisClient ||
-      require('redis').createClient(options.redis)
+    cacheKey: (typeof options.cacheKey === 'function') ?
+      options.cacheKey :
+      function(req) {
+        return options.prefix + req.originalUrl;
+      },
+    skipCache: options.skipCache || false,
+    cacheClient: options.cacheClient || redisClient
   };
+
+  if (!options.cacheClient ||
+      !options.cacheClient.get ||
+      !options.cacheClient.set ||
+      !options.cacheClient.expire) {
+    cacheEvents.emit('warning',
+      new Error('Invalid cacheClient value. Reverting to redis.'));
+    options.cacheClient =
+      redisClient = require('redis').createClient(options.redis);
+  }
+
+  var skipFunction = (typeof options.skipCache === 'function');
 
   return function(req, res, next) {
     // Should we check the cache?
-    if (!options.skipCache(req)) {
+    if (options.skipCache === true ||
+        (skipFunction && options.skipCache(req))) {
+      cacheEvents.emit('skip', req);
       return;
     }
 
     // Check cache
     var client = options.cacheClient;
-    var cacheKey = options.getCacheKey(req);
+    var cacheKey = options.cacheKey(req);
 
     client.get(cacheKey, function(err, data) {
       if (err) {
@@ -45,18 +60,23 @@ function outputCache(options) {
 
       if (data) {
         try {
+          cacheEvents.emit('hit', cacheKey, req);
           var dataObj = JSON.parse(data);
           res.statusCode = dataObj.statusCode;
           res.set(dataObj.headers);
           res.send(dataObj.body);
         }
         catch (e) {
+          cacheEvents.emit('warning', e);
+          cacheEvents.emit('delete', cacheKey);
           client.del(cacheKey);
           next();
         }
 
         return;
       }
+
+      cacheEvents.emit('miss', cacheKey, req);
 
       var headers = {};
 
@@ -96,10 +116,18 @@ function outputCache(options) {
 
         client.set(cacheKey, JSON.stringify(cacheObj), function(err) {
           if (err) {
+            cacheEvents.emit('cacheError', err);
             return;
           }
 
-          client.expire(cacheKey, options.ttl);
+          client.expire(cacheKey, options.ttl, function(err) {
+            if (err) {
+              cacheEvents.emit('cacheError', err);
+              return;
+            }
+
+            cacheEvents.emit('save', cacheKey, cacheObj);
+          });
         });
 
         _end.apply(self, args);
@@ -108,6 +136,17 @@ function outputCache(options) {
       next();
     });
   };
+}
+
+outputCache.events = cacheEvents;
+for (var method in cacheEvents) {
+  var value = cacheEvents[method];
+  if (typeof value === 'function') {
+    outputCache[method] = value.bind(cacheEvents);
+  }
+  else {
+    outputCache[method] = value;
+  }
 }
 
 module.exports = outputCache;
