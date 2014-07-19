@@ -1,3 +1,4 @@
+var crypto = require('crypto');
 var events = require('events');
 var util = require('util');
 
@@ -23,7 +24,12 @@ function outputCache(options) {
     cacheKey: (typeof options.cacheKey === 'function') ?
       options.cacheKey :
       function(req) {
-        return options.prefix + ':' + req.originalUrl;
+        var base = req.originalUrl;
+        if (base.length > 40) {
+          base = crypto.createHash('sha1').update(base).digest('hex');
+        }
+
+        return options.prefix + ':' + base;
       },
     skipCache: options.skipCache || false,
     cacheClient: options.cacheClient || redisClient
@@ -105,6 +111,8 @@ function outputCache(options) {
           _end.apply(self, args);
           return;
         }
+
+        res.setHeader('Cache-Control', 'max-age=' + options.ttl + '000');
 
         var cacheObj = {
           headers: headers,
