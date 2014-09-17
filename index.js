@@ -53,6 +53,11 @@ function outputCache(options) {
       return;
     }
 
+    // Don't cache non-GET requests
+    if (req.method !== 'GET') {
+      return;
+    }
+
     // Check cache
     var client = options.cacheClient;
     var cacheKey = options.cacheKey(req);
@@ -119,6 +124,10 @@ function outputCache(options) {
           body: res.cacheBody,
           statusCode: res.statusCode
         };
+
+        if (res.nocache) {
+          return;
+        }
 
         client.set(cacheKey, JSON.stringify(cacheObj), function(err) {
           if (err) {
