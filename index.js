@@ -47,15 +47,11 @@ function outputCache(options) {
 
   return function(req, res, next) {
     // Should we check the cache?
-    if (options.skipCache === true ||
+    // Don't cache non-GET requests
+    if (req.method !== 'GET' || options.skipCache === true ||
         (skipFunction && options.skipCache(req))) {
       cacheEvents.emit('skip', req);
-      return;
-    }
-
-    // Don't cache non-GET requests
-    if (req.method !== 'GET') {
-      return;
+      return next();
     }
 
     // Check cache
